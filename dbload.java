@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class dbload {
+public class dbloadgit {
 	
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
@@ -42,7 +42,10 @@ public class dbload {
 		
 		if(argsRight)
 		{
+			//1:int num,2:50 char,3:float,4:2 float num
+			int[] typeList = {1,1,1,1,2,2,2,1,1,1,2,2,2,2,2,2,3,3,4};
 			List<String> data = readCsv(new File(readFilePath));
+			int length_byte = getLineLength(typeList);
 			System.out.println("over");
 			
 		}else {
@@ -85,6 +88,36 @@ public class dbload {
  
         return data;
     }//end of readCsv
+	
+    /**  
+     * get length of one line data
+     *  
+     * @param typeList : array, the type of data  
+     * @return int, the count of bytes array
+     */ 
+	public static int getLineLength(int[] typeList) {
+		int i,type,length_byte=0;
+	    for(i=0;i<typeList.length;i++){
+	    	type = typeList[i];
+	    	switch(type) {
+	    	case 1: // int 4 byte
+	    		length_byte += 4;
+	    		break;
+	    	case 2: // 50 char  50 byte
+	    		length_byte += 50;
+	    		break;
+	    	case 3: //float  4 byte
+	    		length_byte += 4;
+	    		break;
+	    	case 4: //2 float  8 byte
+	    		length_byte += 8;
+	    		break;
+	    	}
+	    }
+	    length_byte = length_byte + 2;//"\r\n"
+	    System.out.println("length_byte:"+length_byte);
+	    return length_byte;
+	}//end of getLineLength
 	
     
 }//end of class dbloadgit
