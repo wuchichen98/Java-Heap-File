@@ -6,12 +6,24 @@ javac dbquery.java
 
 ## run dbload
 command:
+
+
 java dbload -p pagesize datafile
+
+
 examlpe:
+
+
 java dbload -p 4096 test.csv
 
 ## run dbquery
 command:
+
+
 java dbquery text pagesize
+
+
 examlpe:
+
+
 java dbload PRICE 4096
