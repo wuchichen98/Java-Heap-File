@@ -2,6 +2,8 @@
 Create Heap File by Java, Search text in Heap File 
 ## complie
 javac dbload.java
+
+
 javac dbquery.java
 
 ## run dbload
