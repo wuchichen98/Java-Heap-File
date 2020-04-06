@@ -4,13 +4,14 @@ Create Heap File by Java, Search text in Heap File
 javac dbload.java
 javac dbquery.java
 
-## run
-# command 1:
+## run dbload
+command:
 java dbload -p pagesize datafile
-# examlpe 1:
+examlpe:
 java dbload -p 4096 test.csv
 
-# command 1:
+## run dbquery
+command:
 java dbquery text pagesize
-# examlpe 1:
+examlpe:
 java dbload PRICE 4096
