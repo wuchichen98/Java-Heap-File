@@ -7,6 +7,8 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 public class dbload {
 	
@@ -19,18 +21,18 @@ public class dbload {
 		boolean argsRight = false;
 		
 		for(String s :args){
-			System.out.println(s+"  "+s.length());
+			//System.out.println(s+"  "+s.length());
 		}
 		
 		if (args.length == 3) {
-			System.out.println("legth true");
+			//System.out.println("legth true");
 			try {
 				if(args[0].equals("-p")) {
-					System.out.println("args[0] true");
-					writeFilePath = args[2];
+					//System.out.println("args[0] true");
+					readFilePath = args[2];
 					pageSize = Integer.parseInt( args[1] );
-					System.out.println("writeFilePath:"+writeFilePath);
-					System.out.println("pageSize:"+pageSize);
+					//System.out.println("readFilePath:"+readFilePath);
+					//System.out.println("pageSize:"+pageSize);
 					argsRight = true;
 				}
 			}catch(Exception e){
@@ -40,7 +42,7 @@ public class dbload {
 		
 		//argsRight = true;
 		//pageSize = 4096;
-		//readFilePath = "D:\\File\\Desktop\\java database\\code\\test.csv";
+		//readFilePath = "test.csv";
 		
 		
 		if(argsRight)
@@ -49,15 +51,19 @@ public class dbload {
 			int[] typeList = {1,1,1,1,2,2,2,1,1,1,2,2,2,2,2,2,3,3,4};
 			List<String> data = readCsv(new File(readFilePath));
 			int length_byte = getLineLength(typeList);
-			writeHeadFile(writeFilePath,data,pageSize,typeList,length_byte);
-			System.out.println("over");
+			long  startTime = System.currentTimeMillis();
+			Map<String, Integer> map = writeHeadFile(writeFilePath,data,pageSize,typeList,length_byte);
+			long endTime = System.currentTimeMillis();
+			System.out.println("the number of records loaded:" + map.get("recordNum"));
+			System.out.println("the number of pages used:" + map.get("pageNum"));
+			System.out.println("the number of milliseconds to create the heap file:" + (endTime - startTime) + "ms");
 			
 		}else {
 			System.out.println("args error");
 		}
 		
 		
-		System.out.println("main func over");
+		//System.out.println("main func over");
 		
     }//end of main
 	
@@ -89,7 +95,7 @@ public class dbload {
                 }
             }
         }
- 
+		//System.out.println("read csv success:"+data.size());
         return data;
     }//end of readCsv
 	
@@ -119,7 +125,7 @@ public class dbload {
 	    	}
 	    }
 	    length_byte = length_byte + 2;//"\r\n"
-	    System.out.println("length_byte:"+length_byte);
+	    //System.out.println("length_byte:"+length_byte);
 	    return length_byte;
 	}//end of getLineLength
 	
@@ -131,44 +137,49 @@ public class dbload {
      * @param pageSize: page size
      * @param typeList: a int array,the data type and bytes count of line data
      * @param length_byte: the count of bytes
-     * @return void
+     * @return Map<String, Integer>,contains: the number of records loaded, number of pages used
      */
-    public static void writeHeadFile(String filePath,List<String>  data,int pageSize,int[] typeList,int length_byte){    
-       File file = new File(filePath);
-       try {
-           if(file.exists()){
-               if (!file.delete()) {
-                   throw new IOException("Delete file failure,path:" + file.getAbsolutePath());
-                 }
-           }
-           file.createNewFile();
-           int pagei = 0,pagecount=0;;
-           byte[] pageContent = new byte[pageSize];
-           Arrays.fill(pageContent, (byte) 0);
-           for(int i =1;i<data.size();i++) {
-        	   //System.out.println(i);
-        	   byte[] content = lineStrToBytes(lineStrToList(data.get(i)),typeList,length_byte);
+	public static Map<String, Integer> writeHeadFile(String filePath,List<String>  data,int pageSize,int[] typeList,int length_byte){    
+		Map<String, Integer> map = new HashMap<String, Integer>();
+    	File file = new File(filePath);
+    	int pagei = 0, pageNum=0, recordNum = 0;
+    	try {
+    		if(file.exists()){
+    			if (!file.delete()) {
+    				throw new IOException("Delete file failure,path:" + file.getAbsolutePath());
+    				}
+    			}
+            file.createNewFile();
+            byte[] pageContent = new byte[pageSize];
+            Arrays.fill(pageContent, (byte) 0);
+            for(int i =1;i<data.size();i++) {
+        	    //System.out.println(i);
+        	    byte[] content = lineStrToBytes(lineStrToList(data.get(i)),typeList,length_byte);
+        	    recordNum++;
+        	    if(length_byte + pagei < pageSize) {
+        		    System.arraycopy(content, 0, pageContent, pagei, length_byte);
+        		    pagei += length_byte;
+        	    }
+        	    else {
+        		    WriteByteToFile(filePath,pageContent,true);
+        		    Arrays.fill(pageContent, (byte) 0);
+        		    pagei = 0;
+        		    System.arraycopy(content, 0, pageContent, pagei, length_byte);
+        		    pagei += length_byte;
+        		    pageNum++;
+        		    //System.out.println("page count:"+pageNum);
+        	    }
         	   
-        	   if(length_byte + pagei < pageSize) {
-        		   System.arraycopy(content, 0, pageContent, pagei, length_byte);
-        		   pagei += length_byte;
-        	   }
-        	   else {
-        		   WriteByteToFile(filePath,pageContent,true);
-        		   Arrays.fill(pageContent, (byte) 0);
-        		   pagei = 0;
-        		   System.arraycopy(content, 0, pageContent, pagei, length_byte);
-        		   pagei += length_byte;
-        		   pagecount++;
-        		   //System.out.println("page count:"+pagecount);
-        	   }
         	   
-        	   
-           }
-       } catch (Exception e) {
-           e.printStackTrace();
-       }
-    }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        map.put("recordNum", recordNum);
+        map.put("pageNum", pageNum);
+
+        return map;
+    }// end of writeHeadFile
     
     /** write one page bytes array to Head File,
      * @param path: file path
