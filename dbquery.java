@@ -140,7 +140,7 @@ public class dbquery {
     		if(buildName.indexOf(text)!=-1) {
         		List<String> strList =  bytesToStringList(lineBytes,typeList);
         		System.out.print(strList.get(0));
-        		for(int k=0;k<strList.size();k++) {
+        		for(int k=1;k<strList.size();k++) {
         			System.out.print(","+strList.get(k));
         		}
         		System.out.println("");
