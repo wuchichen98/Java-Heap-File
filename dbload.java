@@ -29,8 +29,8 @@ public class dbload {
 					System.out.println("args[0] true");
 					writeFilePath = args[2];
 					pageSize = Integer.parseInt( args[1] );
-					System.out.println("filepath:"+writeFilePath);
-					System.out.println("pagesize:"+pageSize);
+					System.out.println("writeFilePath:"+writeFilePath);
+					System.out.println("pageSize:"+pageSize);
 					argsRight = true;
 				}
 			}catch(Exception e){
@@ -38,9 +38,9 @@ public class dbload {
 			}
 		}
 		
-		argsRight = true;
-		pageSize = 4096;
-		readFilePath = "D:\\File\\Desktop\\java database\\code\\test.csv";
+		//argsRight = true;
+		//pageSize = 4096;
+		//readFilePath = "D:\\File\\Desktop\\java database\\code\\test.csv";
 		
 		
 		if(argsRight)
@@ -137,9 +137,11 @@ public class dbload {
        File file = new File(filePath);
        try {
            if(file.exists()){
-               file.createNewFile();
-               System.out.println("create New File: "+filePath);
+               if (!file.delete()) {
+                   throw new IOException("Delete file failure,path:" + file.getAbsolutePath());
+                 }
            }
+           file.createNewFile();
            int pagei = 0,pagecount=0;;
            byte[] pageContent = new byte[pageSize];
            Arrays.fill(pageContent, (byte) 0);
@@ -187,10 +189,48 @@ public class dbload {
 	public static List<String> lineStrToList(String lineStr){
 
     	List<String> lineStrList = new ArrayList<String>();
-
+    	int j,nextComma = 0;
+    	List<Integer> indexList = new ArrayList<Integer>();
+    	indexList.add(0);
+    	while(nextComma < lineStr.length()) {
+    		nextComma = nextComma(lineStr, nextComma);
+    		indexList.add(nextComma);
+    		nextComma++;
+    	}
+    	for(j=1;j<indexList.size();j++) {
+    		String s =lineStr.substring(indexList.get(j-1),indexList.get(j));
+    		s = s.replace(",", "");
+    		s = s.replace("\"", "");
+    		//System.out.println(" "+j+":"+s);
+    		lineStrList.add(s);
+    	}
     	return lineStrList;
     
 	}//end of lineStrToList
+	
+    /**  
+     * get the index of next Comma
+     * @param source: the string
+     * @param st:the index start
+     * @return the index of next Comma
+     */    
+    private static int nextComma(String source, int st) {    
+        int maxPosition = source.length();    
+        boolean inquote = false;    
+        while (st < maxPosition) {    
+            char ch = source.charAt(st);    
+            if (!inquote && ch == ',') {    
+                break;    
+            } else if ('"' == ch) {    
+                inquote = !inquote;    
+            }    
+            st++;
+            
+        }    
+        return st;    
+    }//end of nextComma
+	
+
 	
     /** change a string list to bytes array
      * @param lineStrList: a string list
@@ -199,11 +239,98 @@ public class dbload {
      * @return bytes array
      */	
     public static byte[] lineStrToBytes(List<String> lineStrList,int[] typeList,int length_byte) throws UnsupportedEncodingException {
+    	int i,type,j;
     	byte[] lineBytes = new byte[length_byte];
-
+    	Arrays.fill(lineBytes, (byte) 0);
+    	lineBytes[length_byte - 2] = (byte)'\r';
+    	lineBytes[length_byte - 1] = (byte)'\n';
+    	length_byte = 0;
+    	byte[] tempBytes;
+    	length_byte = 0;
+    	for(i=0; i<lineStrList.size(); i++) {
+    		String str = lineStrList.get(i);
+    		type = typeList[i];
+    		str.getBytes("utf-8");
+        	switch(type) {
+        	case 1: // int 4 byte
+        		if(!str.equals("")) {
+        			tempBytes = intToByteArray(Integer.parseInt(str));
+            		System.arraycopy(tempBytes, 0, lineBytes, length_byte, 4);
+             		
+        		}
+        		length_byte += 4;
+        		break;
+        	case 2: // 50 char  50 byte
+        		tempBytes = str.getBytes("utf-8");
+        		System.arraycopy(tempBytes, 0, lineBytes, length_byte, tempBytes.length);
+        		length_byte += 50;
+        		break;
+        	case 3: //float  4 byte
+        		if(!str.equals("")) {
+	        		tempBytes = float2byte(Float.parseFloat(str));
+	        		System.arraycopy(tempBytes, 0, lineBytes, length_byte, tempBytes.length);
+	        		length_byte += 4;
+        		}
+        		break;
+        	case 4: //2 float  8 byte
+        		str = str.replace("(", "");
+        		str = str.replace(")", "");
+        		String [] sArray = str.split(" ");
+        		tempBytes = float2byte(Float.parseFloat(sArray[0]));
+        		System.arraycopy(tempBytes, 0, lineBytes, length_byte, tempBytes.length);
+        		length_byte += 4;
+        		tempBytes = float2byte(Float.parseFloat(sArray[1]));
+        		System.arraycopy(tempBytes, 0, lineBytes, length_byte, tempBytes.length);
+        		length_byte += 4;
+        		break;
+        	}
+    		
+    		
+    	}
         return lineBytes;
     }//end of lineStrToBytes
+    
+    /**
+     * int to byte[] ,high -> low
+     * @param i: int value
+     * @return byte[]
+     */
+    public static byte[] intToByteArray(int i) {
+        byte[] result = new byte[4];
+        result[0] = (byte)((i >> 24) & 0xFF);
+        result[1] = (byte)((i >> 16) & 0xFF);
+        result[2] = (byte)((i >> 8) & 0xFF);
+        result[3] = (byte)(i & 0xFF);
+        return result;
+    }
+ 
   
-	
+    /** 
+     * float to byte  
+     * @param f : float num
+     * @return  byte[]
+     */  
+    public static byte[] float2byte(float f) {  
+          
+        int fbit = Float.floatToIntBits(f);  
+          
+        byte[] b = new byte[4];    
+        for (int i = 0; i < 4; i++) {    
+            b[i] = (byte) (fbit >> (24 - i * 8));    
+        }   
+          
+        int len = b.length;  
+        byte[] dest = new byte[len];  
+        System.arraycopy(b, 0, dest, 0, len);  
+        byte temp;  
+        for (int i = 0; i < len / 2; ++i) {  
+            temp = dest[i];  
+            dest[i] = dest[len - i - 1];  
+            dest[len - i - 1] = temp;  
+        }  
+          
+        return dest;  
+          
+    }//end of float2byte
 	
 }//end of class dbloadgit
